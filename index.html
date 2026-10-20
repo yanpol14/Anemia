@@ -194,8 +194,11 @@
 
                 <div class="grid-3" style="margin-bottom: 1.25rem;">
                     <div class="form-group">
-                        <label class="form-label" for="hbInput">Hemoglobina Observada (g/dL) *</label>
-                        <input type="number" id="hbInput" class="form-control" placeholder="Ej. 12.0" min="2" max="25" step="0.1" oninput="updateAllCalculations();" required>
+                        <label class="form-label" for="hbInput">Hemoglobina / Hematocrito Observado (%) *</label>
+                        <input type="number" id="hbInput" class="form-control" placeholder="Ej. 36.0" min="6" max="75" step="0.1" oninput="updateAllCalculations();" required>
+                        <small style="font-size: 0.725rem; color: var(--text-dim); margin-top: 0.25rem;">
+                            Equivalente Hb: <strong id="hbCalculatedFromPct" style="color: var(--cyan);">-- g/dL</strong>
+                        </small>
                     </div>
 
                     <div class="metric-box">
@@ -256,8 +259,8 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                         <div>
                             <span id="resSeverityBadge" class="badge badge-cyan">Pendiente</span>
-                            <h2 id="resDiagnosisTitle" style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">Ingrese Hemoglobina</h2>
-                            <p id="resDiagnosisSubtitle" style="color: var(--text-muted); font-size: 0.85rem;">Resultado calculated mediante la fórmula OMS para ajuste de altitud.</p>
+                            <h2 id="resDiagnosisTitle" style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">Ingrese Porcentaje (%)</h2>
+                            <p id="resDiagnosisSubtitle" style="color: var(--text-muted); font-size: 0.85rem;">Resultado calculado mediante la fórmula OMS para ajuste de altitud.</p>
                         </div>
                         <div class="no-print" style="display: flex; gap: 0.5rem;">
                             <button type="button" class="btn btn-success" onclick="saveReportToHistory()">💾 Guardar Paciente</button>
@@ -286,15 +289,46 @@
                 </div>
 
                 <div class="grid-2">
+                    <!-- Tarjeta 1: Medidor Gauge -->
                     <div class="card" style="text-align: center;">
-                        <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">📊 Medidor de Hemoglobina</h3>
-                        <canvas id="gaugeCanvas" width="320" height="170"></canvas>
+                        <h3 style="font-size: 0.95rem; margin-bottom: 0.75rem;">📊 Medidor de Hemoglobina</h3>
+                        
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 1.25rem; flex-wrap: wrap;">
+                            <canvas id="gaugeCanvas" width="280" height="150"></canvas>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 0.6rem; text-align: left; background: var(--bg-input); padding: 0.9rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); min-width: 140px;">
+                                <div>
+                                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Valor Observado</span>
+                                    <strong id="resPctObserved" style="font-size: 1.15rem; color: var(--text-main);">-- %</strong>
+                                </div>
+                                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 0.1rem 0;">
+                                <div>
+                                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Equivalente Hb</span>
+                                    <strong id="resHbEquivalent" style="font-size: 1.15rem; color: var(--cyan);">-- g/dL</strong>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- Tarjeta 2: Causa Probable y Guía -->
                     <div class="card">
-                        <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🩸 Causa Probable y Guía</h3>
-                        <strong id="etiologyHeader" style="color: var(--amber); font-size: 0.85rem;">Causa: Evaluación por Hemograma</strong>
-                        <p id="etiologyBody" style="font-size: 0.775rem; color: var(--text-muted); margin-top: 0.25rem;">Complete la hemoglobina y parámetros de laboratorio para ver la guía clínica.</p>
+                        <h3 style="font-size: 0.95rem; margin-bottom: 0.75rem;">🩸 Causa Probable y Guía Clínica</h3>
+                        <strong id="etiologyHeader" style="color: var(--amber); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Causa: Evaluación por Hemograma</strong>
+                        <p id="etiologyBody" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.4;">
+                            Complete la hemoglobina y parámetros de laboratorio para ver la guía clínica.
+                        </p>
+
+                        <!-- Indicadores de VCM y Descuento por Altitud -->
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; background: var(--bg-input); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                            <div>
+                                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">VCM Observado</span>
+                                <strong id="resVcmDisplay" style="font-size: 1.1rem; color: var(--amber);">-- fL</strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Descuento Altitud</span>
+                                <strong id="resDiscountDisplay" style="font-size: 1.1rem; color: var(--rose);">-0.0 g/dL</strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

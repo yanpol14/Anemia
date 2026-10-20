@@ -24,7 +24,7 @@ let historyStore = JSON.parse(localStorage.getItem('hemo_patient_history') || '[
 
 // 3. FÓRMULA OFICIAL OMS DE CORRECCIÓN POR ALTITUD
 function getAltitudeCorrection(meters) {
-    if (meters < 1000) return 0;
+    if (!meters || meters < 1000) return 0;
     if (meters <= 1499) return 0.2;
     if (meters <= 1999) return 0.5;
     if (meters <= 2499) return 0.8;
@@ -40,6 +40,16 @@ function setAltitude(m) {
     const input = document.getElementById('altitudInput');
     if (input) {
         input.value = m;
+        
+        // Actualizar botones de ciudades activos
+        document.querySelectorAll('.chip-btn').forEach(btn => {
+            if (btn.getAttribute('onclick')?.includes(`(${m})`)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
         updateAllCalculations();
     }
 }
@@ -53,7 +63,10 @@ function autoSelectGroup() {
 
     if (!edadEl || !unidadEl || !sexoEl) return;
 
-    const edad = parseFloat(edadEl.value) || 0;
+    const edadRaw = edadEl.value;
+    if (edadRaw === '' || edadRaw === null) return;
+
+    const edad = parseFloat(edadRaw) || 0;
     const unidad = unidadEl.value;
     const sexo = sexoEl.value;
     const esGestante = gestanteEl ? gestanteEl.checked : false;
@@ -87,9 +100,10 @@ function goToStep(step) {
 function validateStep1AndNext() {
     const dni = document.getElementById('dni')?.value.trim();
     const nombres = document.getElementById('nombres')?.value.trim();
+    const appPaterno = document.getElementById('appPaterno')?.value.trim();
 
-    if (!dni || !nombres) {
-        alert("Ingrese los datos obligatorios del paciente (DNI y Nombres).");
+    if (!dni || !nombres || !appPaterno) {
+        alert("Por favor complete los datos obligatorios del paciente (DNI, Nombres y Apellido Paterno).");
         return;
     }
     goToStep(2);
@@ -98,12 +112,11 @@ function validateStep1AndNext() {
 // 6. CÁLCULO EN TIEMPO REAL
 function updateAllCalculations() {
     const popRadio = document.querySelector('input[name="poblacion"]:checked');
-    if (!popRadio) return;
-
-    const popVal = popRadio.value;
+    const popVal = popRadio ? popRadio.value : 'hombre_adulto';
     const popData = WHO_POPULATION[popVal] || WHO_POPULATION.hombre_adulto;
 
-    const meters = parseFloat(document.getElementById('altitudInput')?.value) || 0;
+    const altitudRaw = document.getElementById('altitudInput')?.value;
+    const meters = altitudRaw !== '' && altitudRaw !== null ? parseFloat(altitudRaw) : 0;
     const altCorrection = getAltitudeCorrection(meters);
 
     const altBadge = document.getElementById('altFactorBadge');
@@ -111,11 +124,50 @@ function updateAllCalculations() {
     if (altBadge) altBadge.innerText = `+${altCorrection} g/dL`;
     if (altText) altText.innerText = `-${altCorrection} g/dL`;
 
-    const hbObserved = parseFloat(document.getElementById('hbInput')?.value) || 0;
-    const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
-    const vcm = parseFloat(document.getElementById('vcmInput')?.value) || 80;
+    const hbRaw = document.getElementById('hbInput')?.value;
+    const vcmRaw = document.getElementById('vcmInput')?.value;
 
     const hbDisp = document.getElementById('hbAdjustedDisplay');
+    const vcmTag = document.getElementById('vcmClassTag');
+
+    // Manejar VCM
+    let vcmText = 'Normocítica';
+    if (vcmRaw !== '' && vcmRaw !== null) {
+        const vcmVal = parseFloat(vcmRaw);
+        if (vcmVal < 80) {
+            vcmText = 'Microcítica';
+            if (vcmTag) { vcmTag.innerText = 'Microcítica'; vcmTag.className = 'badge badge-amber'; }
+        } else if (vcmVal > 100) {
+            vcmText = 'Macrocítica';
+            if (vcmTag) { vcmTag.innerText = 'Macrocítica'; vcmTag.className = 'badge badge-rose'; }
+        } else {
+            vcmText = 'Normocítica';
+            if (vcmTag) { vcmTag.innerText = 'Normocítica'; vcmTag.className = 'badge badge-emerald'; }
+        }
+    } else if (vcmTag) {
+        vcmTag.innerText = 'Pendiente';
+        vcmTag.className = 'badge badge-cyan';
+    }
+
+    // Si no hay Hb ingresada aún
+    if (hbRaw === '' || hbRaw === null || isNaN(parseFloat(hbRaw))) {
+        if (hbDisp) hbDisp.innerText = '-- g/dL';
+        
+        const sevBadge = document.getElementById('resSeverityBadge');
+        if (sevBadge) { sevBadge.innerText = 'Pendiente'; sevBadge.className = 'badge badge-cyan'; }
+
+        const titleEl = document.getElementById('resDiagnosisTitle');
+        if (titleEl) titleEl.innerText = 'Ingrese Hemoglobina';
+
+        const hbCorrEl = document.getElementById('resHbCorr');
+        if (hbCorrEl) hbCorrEl.innerText = '-- g/dL';
+
+        return;
+    }
+
+    const hbObserved = parseFloat(hbRaw);
+    const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
+
     if (hbDisp) hbDisp.innerText = `${hbAdjusted} g/dL`;
 
     let severity = 'Sin Anemia';
@@ -126,15 +178,15 @@ function updateAllCalculations() {
         if (hbAdjusted <= popData.severeMax) {
             severity = 'Anemia Severa';
             badgeClass = 'badge badge-rose';
-            diagTitle = 'Anemia Severa';
+            diagTitle = `Anemia Severa ${vcmText}`;
         } else if (hbAdjusted >= popData.modMin && hbAdjusted <= popData.modMax) {
             severity = 'Anemia Moderada';
             badgeClass = 'badge badge-amber';
-            diagTitle = 'Anemia Moderada';
+            diagTitle = `Anemia Moderada ${vcmText}`;
         } else {
             severity = 'Anemia Leve';
             badgeClass = 'badge badge-cyan';
-            diagTitle = 'Anemia Leve';
+            diagTitle = `Anemia Leve ${vcmText}`;
         }
     }
 
@@ -150,12 +202,17 @@ function updateAllCalculations() {
     const hbCorrEl = document.getElementById('resHbCorr');
     if (hbCorrEl) hbCorrEl.innerText = `${hbAdjusted} g/dL`;
 
-    // Datos para reporte impreso
+    // Contar síntomas seleccionados
+    const selectedSymptoms = document.querySelectorAll('input[name="sintoma"]:checked').length;
+    const symCountEl = document.getElementById('resSymptomCount');
+    if (symCountEl) symCountEl.innerText = selectedSymptoms;
+
+    // Datos para el reporte impreso
     const dniEl = document.getElementById('prtDni');
     const nomEl = document.getElementById('prtNombre');
     const diagEl = document.getElementById('prtDiag');
     if (dniEl) dniEl.innerText = document.getElementById('dni')?.value || '--';
-    if (nomEl) nomEl.innerText = document.getElementById('nombres')?.value || '--';
+    if (nomEl) nomEl.innerText = `${document.getElementById('nombres')?.value || ''} ${document.getElementById('appPaterno')?.value || ''}`.trim() || '--';
     if (diagEl) diagEl.innerText = diagTitle;
 
     if (currentStep === 4) drawGauge();
@@ -171,10 +228,16 @@ function drawGauge() {
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    const meters = parseFloat(document.getElementById('altitudInput')?.value) || 0;
+    const hbRaw = document.getElementById('hbInput')?.value;
+    const altitudRaw = document.getElementById('altitudInput')?.value;
+    const meters = altitudRaw ? parseFloat(altitudRaw) : 0;
     const altCorrection = getAltitudeCorrection(meters);
-    const hbObserved = parseFloat(document.getElementById('hbInput')?.value) || 0;
-    const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
+
+    let hbAdjusted = 14.0;
+    if (hbRaw !== '' && hbRaw !== null) {
+        const hbObs = parseFloat(hbRaw);
+        hbAdjusted = Math.max(0, Math.round((hbObs - altCorrection) * 10) / 10);
+    }
 
     const centerX = width / 2;
     const centerY = height - 20;
@@ -215,14 +278,35 @@ function drawArc(ctx, x, y, radius, start, end, color) {
     ctx.stroke();
 }
 
-// 8. GUARDAR Y SINCRONIZAR CON SUPABASE & LOCALSTORAGE
+// 8. FUNCION DE LIMPIEZA DEL FORMULARIO
+function resetForm() {
+    const form = document.getElementById('evaluationForm');
+    if (form) form.reset();
+
+    // Desmarcar checkboxes y chips
+    document.querySelectorAll('input[name="sintoma"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const gestCheck = document.getElementById('gestanteCheck');
+    if (gestCheck) gestCheck.checked = false;
+
+    // Seleccionar grupo inicial por defecto
+    const defaultRadio = document.querySelector('input[name="poblacion"][value="hombre_adulto"]');
+    if (defaultRadio) defaultRadio.checked = true;
+
+    // Actualizar pantalla y volver al paso 1
+    updateAllCalculations();
+    goToStep(1);
+}
+
+// 9. GUARDAR Y SINCRONIZAR CON SUPABASE & LOCALSTORAGE
 async function saveReportToHistory() {
     const dni = document.getElementById('dni')?.value.trim();
     const nombres = document.getElementById('nombres')?.value.trim();
     const appPaterno = document.getElementById('appPaterno')?.value.trim() || '';
 
     if (!dni || !nombres) {
-        alert("Por favor ingrese el DNI y Nombre del paciente.");
+        alert("Por favor ingrese al menos el DNI y Nombre del paciente.");
         return;
     }
 
@@ -236,24 +320,22 @@ async function saveReportToHistory() {
         fecha: new Date().toLocaleDateString('es-PE'),
         dni: dni,
         nombreCompleto: `${nombres} ${appPaterno}`.trim(),
-        edadSexo: `${document.getElementById('edad')?.value} / ${document.getElementById('sexo')?.value}`,
+        edadSexo: `${document.getElementById('edad')?.value || '--'} / ${document.getElementById('sexo')?.value || '--'}`,
         altitud: meters,
         hbObserved: hbObserved,
         hbAdjusted: hbAdjusted,
         severity: document.getElementById('resSeverityBadge')?.innerText || 'Sin Anemia'
     };
 
-    // Guardar en LocalStorage
     historyStore.unshift(record);
     localStorage.setItem('hemo_patient_history', JSON.stringify(historyStore));
 
-    // Intentar guardar en Supabase si está configurado
     if (supabaseClient) {
         try {
             await supabaseClient.from('pacientes_anemia').insert([record]);
             console.log("Sincronizado con Supabase.");
         } catch (err) {
-            console.warn("No se pudo sincronizar con Supabase, guardado en LocalStorage.", err);
+            console.warn("Guardado localmente. No se conectó a Supabase.", err);
         }
     }
 
@@ -261,7 +343,7 @@ async function saveReportToHistory() {
     window.location.href = "historial.html";
 }
 
-// 9. RENDERIZAR TABLA DE HISTORIAL
+// 10. RENDERIZAR TABLA DE HISTORIAL
 function renderHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
@@ -315,7 +397,7 @@ function renderHistoryTable() {
 }
 
 function deleteRecord(id) {
-    if (confirm("¿Desea eliminar este registro?")) {
+    if (confirm("¿Desea eliminar este registro del historial?")) {
         historyStore = historyStore.filter(i => i.id !== id);
         localStorage.setItem('hemo_patient_history', JSON.stringify(historyStore));
         renderHistoryTable();
@@ -332,6 +414,10 @@ function clearAllHistory() {
 
 // Inicialización al cargar la página
 window.onload = function() {
-    autoSelectGroup();
-    updateAllCalculations();
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reset') === 'true') {
+        resetForm();
+    } else {
+        updateAllCalculations();
+    }
 };

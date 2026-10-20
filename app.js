@@ -344,9 +344,27 @@ async function saveReportToHistory() {
 }
 
 // 10. RENDERIZAR TABLA DE HISTORIAL
-function renderHistoryTable() {
+// 10. RENDERIZAR TABLA DE HISTORIAL (Sincronizado con Supabase)
+async function renderHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
+
+    // Intentar traer los datos actualizados desde Supabase si está disponible
+    if (supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('pacientes_anemia')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                historyStore = data;
+                localStorage.setItem('hemo_patient_history', JSON.stringify(historyStore));
+            }
+        } catch (err) {
+            console.warn("No se pudo obtener datos de Supabase, usando localStorage local.", err);
+        }
+    }
 
     const search = document.getElementById('searchDniInput')?.value.toLowerCase().trim() || '';
     const filterSev = document.getElementById('filterSeveritySelect')?.value || 'ALL';
@@ -396,10 +414,18 @@ function renderHistoryTable() {
     });
 }
 
-function deleteRecord(id) {
+async function deleteRecord(id) {
     if (confirm("¿Desea eliminar este registro del historial?")) {
         historyStore = historyStore.filter(i => i.id !== id);
         localStorage.setItem('hemo_patient_history', JSON.stringify(historyStore));
+
+        if (supabaseClient) {
+            try {
+                await supabaseClient.from('pacientes_anemia').delete().eq('id', id);
+            } catch (err) {
+                console.warn("No se pudo borrar de Supabase.", err);
+            }
+        }
         renderHistoryTable();
     }
 }

@@ -2,7 +2,7 @@
    HEMOEVALUATOR - LÓGICA CLÍNICA OMS, CANVAS Y CONEXIÓN SUPABASE
    ========================================================================== */
 
-// 1. CONFIGURACIÓN DE SUPABASE (Reemplaza con tus claves de Supabase)
+// 1. CONFIGURACIÓN DE SUPABASE
 const SUPABASE_URL = "https://nkxurfvugbcxcpvbtisp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5reHVyZnZ1Z2JjeGNwdmJ0aXNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0NjQ3NzksImV4cCI6MjEwODA0MDc3OX0.vl6BH2mVibl00GBhGaO-wTbkCL5w-itYxv0YxTHKmbM";
 
@@ -288,9 +288,15 @@ function renderHistoryTable() {
         const tr = document.createElement('tr');
         
         let badgeClass = 'badge badge-emerald';
-        if (item.severity === 'Anemia Leve') badgeClass = 'badge badge-cyan';
-        if (item.severity === 'Anemia Moderada') badgeClass = 'badge badge-amber';
-        if (item.severity === 'Anemia Severa') badgeClass = 'badge badge-rose';
+        const sevLower = (item.severity || '').toLowerCase();
+
+        if (sevLower.includes('severa')) {
+            badgeClass = 'badge badge-rose';
+        } else if (sevLower.includes('moderada')) {
+            badgeClass = 'badge badge-amber';
+        } else if (sevLower.includes('leve')) {
+            badgeClass = 'badge badge-cyan';
+        }
 
         tr.innerHTML = `
             <td style="color:var(--text-muted);">${item.fecha}</td>

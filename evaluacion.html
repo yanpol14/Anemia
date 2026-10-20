@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación de Anemia - OMS / MINSA</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- SDK Supabase (Opcional para sincronización en la nube) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="header no-print">
+        <div class="header-container">
+            <div class="brand">
+                <div class="brand-icon">Fe</div>
+                <div>
+                    <h1 class="brand-title">HemoEvaluator OMS / MINSA</h1>
+                    <p class="brand-subtitle">Evaluación Clínica Real e Integración Supabase</p>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <a href="evaluacion.html" class="btn btn-primary">📋 Evaluación de Paciente</a>
+                <a href="historial.html" class="btn btn-secondary">📁 Historial de Pacientes</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Wizard Navigation -->
+        <div class="wizard-steps no-print">
+            <div class="step-tab active" id="tab-step-1" onclick="goToStep(1)">
+                <div class="step-number">1</div>
+                <div>
+                    <strong style="font-size: 0.85rem;">Paso 1: Paciente</strong>
+                    <p style="font-size: 0.7rem; color: var(--text-dim);">DNI, Edad y Altitud</p>
+                </div>
+            </div>
+            <div class="step-tab" id="tab-step-2" onclick="goToStep(2)">
+                <div class="step-number">2</div>
+                <div>
+                    <strong style="font-size: 0.85rem;">Paso 2: Hemograma</strong>
+                    <p style="font-size: 0.7rem; color: var(--text-dim);">Hb, Hcto y VCM</p>
+                </div>
+            </div>
+            <div class="step-tab" id="tab-step-3" onclick="goToStep(3)">
+                <div class="step-number">3</div>
+                <div>
+                    <strong style="font-size: 0.85rem;">Paso 3: Síntomas</strong>
+                    <p style="font-size: 0.7rem; color: var(--text-dim);">Signos Clínicos</p>
+                </div>
+            </div>
+            <div class="step-tab" id="tab-step-4" onclick="goToStep(4)">
+                <div class="step-number">4</div>
+                <div>
+                    <strong style="font-size: 0.85rem;">Paso 4: Dictamen</strong>
+                    <p style="font-size: 0.7rem; color: var(--text-dim);">Diagnóstico & Reporte</p>
+                </div>
+            </div>
+        </div>
+
+        <form id="evaluationForm" onsubmit="return false;">
+
+            <!-- STEP 1: FILIACIÓN -->
+            <div id="step-1" class="card">
+                <div class="card-header">
+                    <div class="card-title">👤 Datos del Paciente y Geografía de Residencia</div>
+                    <span class="badge badge-cyan">Criterios Reales OMS</span>
+                </div>
+
+                <div class="grid-4" style="margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="dni">DNI / Doc. Identidad *</label>
+                        <input type="text" id="dni" class="form-control" maxlength="12" placeholder="Ingrese DNI" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="nombres">Nombres *</label>
+                        <input type="text" id="nombres" class="form-control" placeholder="Nombres" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="appPaterno">Apellido Paterno *</label>
+                        <input type="text" id="appPaterno" class="form-control" placeholder="Apellido Paterno" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="appMaterno">Apellido Materno</label>
+                        <input type="text" id="appMaterno" class="form-control" placeholder="Apellido Materno">
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-bottom: 1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="edad">Edad Real *</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="number" id="edad" class="form-control" min="0" value="25" oninput="autoSelectGroup(); updateAllCalculations();" required>
+                            <select id="unidadEdad" class="form-control" style="width: 110px;" onchange="autoSelectGroup(); updateAllCalculations();">
+                                <option value="años">Años</option>
+                                <option value="meses">Meses</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sexo">Sexo Biológico</label>
+                        <select id="sexo" class="form-control" onchange="autoSelectGroup(); updateAllCalculations();">
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Estado Gestacional</label>
+                        <label class="form-control" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="gestanteCheck" onchange="autoSelectGroup(); updateAllCalculations();">
+                            <span style="font-weight: 600; color: var(--rose);">Gestante / Embarazada</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Selección de Población -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label">Grupo Poblacional OMS Evaluado</label>
+                    <div class="radio-grid">
+                        <label class="radio-card">
+                            <input type="radio" name="poblacion" value="hombre_adulto" checked onchange="updateAllCalculations();">
+                            <div>
+                                <strong>Hombre Adulto (≥ 15 años)</strong>
+                                <p style="font-size: 0.725rem; color: var(--text-muted);">Umbral Hb: &lt; 13.0 g/dL</p>
+                            </div>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="poblacion" value="mujer_adulta" onchange="updateAllCalculations();">
+                            <div>
+                                <strong>Mujer Adulta No Embarazada</strong>
+                                <p style="font-size: 0.725rem; color: var(--text-muted);">Umbral Hb: &lt; 12.0 g/dL</p>
+                            </div>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="poblacion" value="mujer_embarazada" onchange="updateAllCalculations();">
+                            <div>
+                                <strong>Mujer Embarazada</strong>
+                                <p style="font-size: 0.725rem; color: var(--text-muted);">Umbral Hb: &lt; 11.0 g/dL</p>
+                            </div>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="poblacion" value="nino_6_59m" onchange="updateAllCalculations();">
+                            <div>
+                                <strong>Niño / Niña (6 a 59 meses)</strong>
+                                <p style="font-size: 0.725rem; color: var(--text-muted);">Umbral Hb: &lt; 11.0 g/dL</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Altitud -->
+                <div class="grid-2" style="background: var(--bg-input); padding: 1.25rem; border-radius: var(--radius-md);">
+                    <div class="form-group">
+                        <label class="form-label" for="altitudInput">Altitud de Residencia (m s.n.m.)</label>
+                        <input type="number" id="altitudInput" class="form-control" value="3250" min="0" step="50" oninput="updateAllCalculations();">
+                        
+                        <div class="city-chips">
+                            <button type="button" class="chip-btn active" onclick="setAltitude(3250)">📍 Huancayo (3,250m)</button>
+                            <button type="button" class="chip-btn" onclick="setAltitude(0)">Lima (0m)</button>
+                            <button type="button" class="chip-btn" onclick="setAltitude(2325)">Arequipa (2,325m)</button>
+                            <button type="button" class="chip-btn" onclick="setAltitude(3399)">Cusco (3,399m)</button>
+                            <button type="button" class="chip-btn" onclick="setAltitude(3812)">Puno (3,812m)</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; justify-content: center; gap: 0.3rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Factor Ajuste OMS:</span>
+                            <span id="altFactorBadge" class="badge badge-amber">+2.3 g/dL</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Descuento Restado:</span>
+                            <span id="altCorrectionText" style="font-weight: 800; color: var(--rose);">-2.3 g/dL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-primary" onclick="validateStep1AndNext()">Siguiente: Hemograma ➔</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: HEMOGRAMA -->
+            <div id="step-2" class="card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-title">🔬 Parámetros del Hemograma Completo</div>
+                </div>
+
+                <div class="grid-3" style="margin-bottom: 1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="hbInput">Hemoglobina Observada (g/dL) *</label>
+                        <input type="number" id="hbInput" class="form-control" value="12.0" min="2" max="25" step="0.1" oninput="updateAllCalculations();" required>
+                    </div>
+
+                    <div class="metric-box">
+                        <span class="metric-label">Hb Corregida por Altitud</span>
+                        <div class="metric-value" id="hbAdjustedDisplay" style="color: var(--rose);">9.7 g/dL</div>
+                        <span id="hbThresholdRefDisplay" style="font-size: 0.75rem; color: var(--text-dim);">Umbral Mínimo: 13.0 g/dL</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="vcmInput">
+                            <span>VCM (fL)</span>
+                            <span id="vcmClassTag" class="badge badge-amber">Microcítica</span>
+                        </label>
+                        <input type="number" id="vcmInput" class="form-control" value="75" min="40" max="140" oninput="updateAllCalculations();">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button type="button" class="btn btn-secondary" onclick="goToStep(1)">⬅ Volver</button>
+                    <button type="button" class="btn btn-primary" onclick="goToStep(3)">Siguiente: Síntomas ➔</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: SÍNTOMAS -->
+            <div id="step-3" class="card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-title">🩺 Síntomas y Signos Clínicos Observados</div>
+                </div>
+
+                <div class="symptom-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;">
+                    <label class="symptom-card">
+                        <input type="checkbox" name="sintoma" value="Fatiga" onchange="updateAllCalculations();">
+                        <div><strong>Fatiga y debilidad extrema</strong></div>
+                    </label>
+                    <label class="symptom-card">
+                        <input type="checkbox" name="sintoma" value="Palidez" onchange="updateAllCalculations();">
+                        <div><strong>Palidez cutáneo-mucosa</strong></div>
+                    </label>
+                    <label class="symptom-card">
+                        <input type="checkbox" name="sintoma" value="Disnea" onchange="updateAllCalculations();">
+                        <div><strong>Dificultad respiratoria (Disnea)</strong></div>
+                    </label>
+                    <label class="symptom-card">
+                        <input type="checkbox" name="sintoma" value="Taquicardia" onchange="updateAllCalculations();">
+                        <div><strong>Palpitaciones / Taquicardia</strong></div>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button type="button" class="btn btn-secondary" onclick="goToStep(2)">⬅ Volver</button>
+                    <button type="button" class="btn btn-primary" onclick="goToStep(4)">Generar Dictamen Real ➔</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: DICTAMEN -->
+            <div id="step-4" style="display: none;">
+                <div class="diagnosis-banner">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <span id="resSeverityBadge" class="badge badge-rose">Anemia Moderada</span>
+                            <h2 id="resDiagnosisTitle" style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">Anemia Moderada Microcítica</h2>
+                            <p id="resDiagnosisSubtitle" style="color: var(--text-muted); font-size: 0.85rem;">Resultado calculado mediante la fórmula OMS para ajuste de altitud.</p>
+                        </div>
+                        <div class="no-print" style="display: flex; gap: 0.5rem;">
+                            <button type="button" class="btn btn-success" onclick="saveReportToHistory()">💾 Guardar Paciente</button>
+                            <button type="button" class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir Reporte</button>
+                        </div>
+                    </div>
+
+                    <div class="grid-4" style="margin-top: 1.25rem;">
+                        <div class="metric-box">
+                            <span class="metric-label">Hb Corregida</span>
+                            <div class="metric-value" id="resHbCorr">9.7 g/dL</div>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">Umbral OMS</span>
+                            <div class="metric-value" id="resHbRef" style="color: var(--emerald);">13.0 g/dL</div>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">Morfología</span>
+                            <div class="metric-value" id="resMorphTitle" style="color: var(--amber);">Microcítica</div>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">Síntomas</span>
+                            <div class="metric-value" id="resSymptomCount" style="color: var(--cyan);">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card" style="text-align: center;">
+                        <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">📊 Medidor de Hemoglobina</h3>
+                        <canvas id="gaugeCanvas" width="320" height="170"></canvas>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🩸 Causa Probable y Guía</h3>
+                        <strong id="etiologyHeader" style="color: var(--amber); font-size: 0.85rem;">Causa: Deficiencia de Hierro</strong>
+                        <p id="etiologyBody" style="font-size: 0.775rem; color: var(--text-muted); margin-top: 0.25rem;">Patrón de hemoglobina corregida disminuida por debajo del límite.</p>
+                    </div>
+                </div>
+
+                <!-- Documento de Impresión -->
+                <div class="print-only" style="padding: 1rem; border: 1px solid #000; font-size: 12px; color: #000; background: #fff;">
+                    <h2 style="text-align: center;">INFORME MÉDICO DE EVALUACIÓN DE ANEMIA</h2>
+                    <hr style="margin: 8px 0;">
+                    <p><strong>DNI:</strong> <span id="prtDni">--</span> | <strong>Paciente:</strong> <span id="prtNombre">--</span></p>
+                    <p><strong>Diagnóstico Final:</strong> <span id="prtDiag">--</span></p>
+                    <p><strong>Hemoglobina Corregida:</strong> <span id="prtHbCorr">--</span> g/dL</p>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 1rem;" class="no-print">
+                    <button type="button" class="btn btn-secondary" onclick="goToStep(3)">⬅ Volver</button>
+                    <button type="button" class="btn btn-primary" onclick="goToStep(1)">🔄 Nueva Evaluación</button>
+                </div>
+            </div>
+
+        </form>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

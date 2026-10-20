@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Pacientes - Evaluación Anemia</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- SDK Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header class="header no-print">
+        <div class="header-container">
+            <div class="brand">
+                <div class="brand-icon">Fe</div>
+                <div>
+                    <h1 class="brand-title">HemoEvaluator OMS / MINSA</h1>
+                    <p class="brand-subtitle">Módulo de Historial y Filtro por DNI</p>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <a href="evaluacion.html" class="btn btn-secondary">📋 Evaluación de Paciente</a>
+                <a href="historial.html" class="btn btn-primary">📁 Historial de Pacientes</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📁 Historial de Pacientes Registrados</div>
+                <button class="btn btn-danger btn-sm" onclick="clearAllHistory()">🗑️ Limpiar Historial Local</button>
+            </div>
+
+            <!-- Filtros de Búsqueda -->
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 240px;">
+                    <input type="text" id="searchDniInput" class="form-control" placeholder="🔍 Buscar por DNI o Nombres..." oninput="renderHistoryTable();">
+                </div>
+                <select id="filterSeveritySelect" class="form-control" style="width: 220px;" onchange="renderHistoryTable();">
+                    <option value="ALL">Todas las Severidades</option>
+                    <option value="Sin Anemia">Sin Anemia</option>
+                    <option value="Anemia Leve">Anemia Leve</option>
+                    <option value="Anemia Moderada">Anemia Moderada</option>
+                    <option value="Anemia Severa">Anemia Severa</option>
+                </select>
+            </div>
+
+            <!-- Tabla de Registros -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>DNI</th>
+                            <th>Paciente</th>
+                            <th>Edad / Sexo</th>
+                            <th>Altitud</th>
+                            <th>Hb Corr.</th>
+                            <th>Diagnóstico</th>
+                            <th style="text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- Cargado dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noHistoryMsg" style="text-align: center; padding: 2rem; color: var(--text-dim); display: none;">
+                No se encontraron registros que coincidan con el DNI o filtro seleccionado.
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        // Renderizar la tabla automáticamente al cargar el historial
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistoryTable();
+        });
+    </script>
+</body>
+</html>

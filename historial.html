@@ -15,13 +15,14 @@
             <div class="brand">
                 <div class="brand-icon">Fe</div>
                 <div>
-                    <h1 class="brand-title">HemoEvaluator</h1>
+                    <h1 class="brand-title">HemoEvaluator OMS / MINSA</h1>
                     <p class="brand-subtitle">Módulo de Historial y Filtro por DNI</p>
                 </div>
             </div>
 
             <div class="nav-actions">
                 <a href="index.html" class="btn btn-secondary">📋 Evaluación de Paciente</a>
+                <a href="index.html?reset=true" class="btn btn-secondary">🧹 Limpiar Formulario</a>
                 <a href="historial.html" class="btn btn-primary">📁 Historial de Pacientes</a>
             </div>
         </div>
@@ -80,7 +81,6 @@
 
     <script src="app.js"></script>
     <script>
-        // Renderizar la tabla automáticamente al cargar el historial
         window.addEventListener('DOMContentLoaded', () => {
             renderHistoryTable();
         });

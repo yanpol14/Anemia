@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evaluación de Anemia - OMS / MINSA</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- SDK Supabase (Opcional para sincronización en la nube) -->
+    <!-- SDK Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -15,11 +15,13 @@
             <div class="brand">
                 <div class="brand-icon">Fe</div>
                 <div>
-                    <h1 class="brand-title">HemoEvaluator</h1>
+                    <h1 class="brand-title">HemoEvaluator OMS / MINSA</h1>
+                    <p class="brand-subtitle">Evaluación Clínica Real e Integración Supabase</p>
                 </div>
             </div>
 
             <div class="nav-actions">
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">🧹 Limpiar Formulario</button>
                 <a href="index.html" class="btn btn-primary">📋 Evaluación de Paciente</a>
                 <a href="historial.html" class="btn btn-secondary">📁 Historial de Pacientes</a>
             </div>
@@ -76,15 +78,15 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="nombres">Nombres *</label>
-                        <input type="text" id="nombres" class="form-control" placeholder="Nombres" required>
+                        <input type="text" id="nombres" class="form-control" placeholder="Ingrese nombres" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="appPaterno">Apellido Paterno *</label>
-                        <input type="text" id="appPaterno" class="form-control" placeholder="Apellido Paterno" required>
+                        <input type="text" id="appPaterno" class="form-control" placeholder="Apellido paterno" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="appMaterno">Apellido Materno</label>
-                        <input type="text" id="appMaterno" class="form-control" placeholder="Apellido Materno">
+                        <input type="text" id="appMaterno" class="form-control" placeholder="Apellido materno">
                     </div>
                 </div>
 
@@ -92,7 +94,7 @@
                     <div class="form-group">
                         <label class="form-label" for="edad">Edad Real *</label>
                         <div style="display: flex; gap: 0.5rem;">
-                            <input type="number" id="edad" class="form-control" min="0" value="25" oninput="autoSelectGroup(); updateAllCalculations();" required>
+                            <input type="number" id="edad" class="form-control" min="0" placeholder="Ej. 25" oninput="autoSelectGroup(); updateAllCalculations();" required>
                             <select id="unidadEdad" class="form-control" style="width: 110px;" onchange="autoSelectGroup(); updateAllCalculations();">
                                 <option value="años">Años</option>
                                 <option value="meses">Meses</option>
@@ -156,10 +158,10 @@
                 <div class="grid-2" style="background: var(--bg-input); padding: 1.25rem; border-radius: var(--radius-md);">
                     <div class="form-group">
                         <label class="form-label" for="altitudInput">Altitud de Residencia (m s.n.m.)</label>
-                        <input type="number" id="altitudInput" class="form-control" value="3250" min="0" step="50" oninput="updateAllCalculations();">
+                        <input type="number" id="altitudInput" class="form-control" placeholder="Ej. 3250" min="0" step="50" oninput="updateAllCalculations();">
                         
                         <div class="city-chips">
-                            <button type="button" class="chip-btn active" onclick="setAltitude(3250)">📍 Huancayo (3,250m)</button>
+                            <button type="button" class="chip-btn" onclick="setAltitude(3250)">📍 Huancayo (3,250m)</button>
                             <button type="button" class="chip-btn" onclick="setAltitude(0)">Lima (0m)</button>
                             <button type="button" class="chip-btn" onclick="setAltitude(2325)">Arequipa (2,325m)</button>
                             <button type="button" class="chip-btn" onclick="setAltitude(3399)">Cusco (3,399m)</button>
@@ -170,11 +172,11 @@
                     <div style="display: flex; flex-direction: column; justify-content: center; gap: 0.3rem;">
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: var(--text-muted);">Factor Ajuste OMS:</span>
-                            <span id="altFactorBadge" class="badge badge-amber">+2.3 g/dL</span>
+                            <span id="altFactorBadge" class="badge badge-amber">+0.0 g/dL</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: var(--text-muted);">Descuento Restado:</span>
-                            <span id="altCorrectionText" style="font-weight: 800; color: var(--rose);">-2.3 g/dL</span>
+                            <span id="altCorrectionText" style="font-weight: 800; color: var(--rose);">-0.0 g/dL</span>
                         </div>
                     </div>
                 </div>
@@ -193,21 +195,21 @@
                 <div class="grid-3" style="margin-bottom: 1.25rem;">
                     <div class="form-group">
                         <label class="form-label" for="hbInput">Hemoglobina Observada (g/dL) *</label>
-                        <input type="number" id="hbInput" class="form-control" value="12.0" min="2" max="25" step="0.1" oninput="updateAllCalculations();" required>
+                        <input type="number" id="hbInput" class="form-control" placeholder="Ej. 12.0" min="2" max="25" step="0.1" oninput="updateAllCalculations();" required>
                     </div>
 
                     <div class="metric-box">
                         <span class="metric-label">Hb Corregida por Altitud</span>
-                        <div class="metric-value" id="hbAdjustedDisplay" style="color: var(--rose);">9.7 g/dL</div>
+                        <div class="metric-value" id="hbAdjustedDisplay" style="color: var(--rose);">-- g/dL</div>
                         <span id="hbThresholdRefDisplay" style="font-size: 0.75rem; color: var(--text-dim);">Umbral Mínimo: 13.0 g/dL</span>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="vcmInput">
                             <span>VCM (fL)</span>
-                            <span id="vcmClassTag" class="badge badge-amber">Microcítica</span>
+                            <span id="vcmClassTag" class="badge badge-cyan">Pendiente</span>
                         </label>
-                        <input type="number" id="vcmInput" class="form-control" value="75" min="40" max="140" oninput="updateAllCalculations();">
+                        <input type="number" id="vcmInput" class="form-control" placeholder="Ej. 85" min="40" max="140" oninput="updateAllCalculations();">
                     </div>
                 </div>
 
@@ -253,9 +255,9 @@
                 <div class="diagnosis-banner">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                         <div>
-                            <span id="resSeverityBadge" class="badge badge-rose">Anemia Moderada</span>
-                            <h2 id="resDiagnosisTitle" style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">Anemia Moderada Microcítica</h2>
-                            <p id="resDiagnosisSubtitle" style="color: var(--text-muted); font-size: 0.85rem;">Resultado calculado mediante la fórmula OMS para ajuste de altitud.</p>
+                            <span id="resSeverityBadge" class="badge badge-cyan">Pendiente</span>
+                            <h2 id="resDiagnosisTitle" style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">Ingrese Hemoglobina</h2>
+                            <p id="resDiagnosisSubtitle" style="color: var(--text-muted); font-size: 0.85rem;">Resultado calculated mediante la fórmula OMS para ajuste de altitud.</p>
                         </div>
                         <div class="no-print" style="display: flex; gap: 0.5rem;">
                             <button type="button" class="btn btn-success" onclick="saveReportToHistory()">💾 Guardar Paciente</button>
@@ -266,7 +268,7 @@
                     <div class="grid-4" style="margin-top: 1.25rem;">
                         <div class="metric-box">
                             <span class="metric-label">Hb Corregida</span>
-                            <div class="metric-value" id="resHbCorr">9.7 g/dL</div>
+                            <div class="metric-value" id="resHbCorr">-- g/dL</div>
                         </div>
                         <div class="metric-box">
                             <span class="metric-label">Umbral OMS</span>
@@ -274,7 +276,7 @@
                         </div>
                         <div class="metric-box">
                             <span class="metric-label">Morfología</span>
-                            <div class="metric-value" id="resMorphTitle" style="color: var(--amber);">Microcítica</div>
+                            <div class="metric-value" id="resMorphTitle" style="color: var(--amber);">Normocítica</div>
                         </div>
                         <div class="metric-box">
                             <span class="metric-label">Síntomas</span>
@@ -291,8 +293,8 @@
 
                     <div class="card">
                         <h3 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🩸 Causa Probable y Guía</h3>
-                        <strong id="etiologyHeader" style="color: var(--amber); font-size: 0.85rem;">Causa: Deficiencia de Hierro</strong>
-                        <p id="etiologyBody" style="font-size: 0.775rem; color: var(--text-muted); margin-top: 0.25rem;">Patrón de hemoglobina corregida disminuida por debajo del límite.</p>
+                        <strong id="etiologyHeader" style="color: var(--amber); font-size: 0.85rem;">Causa: Evaluación por Hemograma</strong>
+                        <p id="etiologyBody" style="font-size: 0.775rem; color: var(--text-muted); margin-top: 0.25rem;">Complete la hemoglobina y parámetros de laboratorio para ver la guía clínica.</p>
                     </div>
                 </div>
 
@@ -307,7 +309,7 @@
 
                 <div style="display: flex; justify-content: space-between; margin-top: 1rem;" class="no-print">
                     <button type="button" class="btn btn-secondary" onclick="goToStep(3)">⬅ Volver</button>
-                    <button type="button" class="btn btn-primary" onclick="goToStep(1)">🔄 Nueva Evaluación</button>
+                    <button type="button" class="btn btn-primary" onclick="resetForm()">🔄 Nueva Evaluación</button>
                 </div>
             </div>
 

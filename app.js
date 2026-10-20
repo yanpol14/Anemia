@@ -22,7 +22,7 @@ const WHO_POPULATION = {
 let currentStep = 1;
 let historyStore = JSON.parse(localStorage.getItem('hemo_patient_history') || '[]');
 
-// 3. FÓRMULA OFICIAL OMS DE CORRECCIÓN POR ALTITUD
+// 3. FÓRMULA OFICIAL OMS DE CORRECCIÓN POR ALTITUD (Huancayo = 2.1 g/dL)
 function getAltitudeCorrection(meters) {
     if (!meters || meters < 1000) return 0;
     if (meters <= 1499) return 0.2;
@@ -30,7 +30,7 @@ function getAltitudeCorrection(meters) {
     if (meters <= 2499) return 0.8;
     if (meters <= 2999) return 1.3;
     if (meters <= 3249) return 1.9;
-    if (meters <= 3499) return 2.3; // Huancayo (3,250 m s.n.m.) = -2.3 g/dL
+    if (meters <= 3499) return 2.1; // Huancayo (3,250 m s.n.m.) = -2.1 g/dL
     if (meters <= 3999) return 2.7;
     if (meters <= 4499) return 3.5;
     return 4.5;
@@ -41,7 +41,6 @@ function setAltitude(m) {
     if (input) {
         input.value = m;
         
-        // Actualizar botones de ciudades activos
         document.querySelectorAll('.chip-btn').forEach(btn => {
             if (btn.getAttribute('onclick')?.includes(`(${m})`)) {
                 btn.classList.add('active');
@@ -124,16 +123,25 @@ function updateAllCalculations() {
     if (altBadge) altBadge.innerText = `+${altCorrection} g/dL`;
     if (altText) altText.innerText = `-${altCorrection} g/dL`;
 
-    const hbRaw = document.getElementById('hbInput')?.value;
+    const pctRaw = document.getElementById('hbInput')?.value;
     const vcmRaw = document.getElementById('vcmInput')?.value;
 
+    const hbCalcLabel = document.getElementById('hbCalculatedFromPct');
     const hbDisp = document.getElementById('hbAdjustedDisplay');
     const vcmTag = document.getElementById('vcmClassTag');
+    const resPctObs = document.getElementById('resPctObserved');
+    const resHbEq = document.getElementById('resHbEquivalent');
+    const etioHeader = document.getElementById('etiologyHeader');
+    const etioBody = document.getElementById('etiologyBody');
+    const resVcmDisp = document.getElementById('resVcmDisplay');
+    const resDiscountDisp = document.getElementById('resDiscountDisplay');
 
-    // Manejar VCM
+    // Manejo de VCM
     let vcmText = 'Normocítica';
     if (vcmRaw !== '' && vcmRaw !== null) {
         const vcmVal = parseFloat(vcmRaw);
+        if (resVcmDisp) resVcmDisp.innerText = `${vcmVal} fL`;
+
         if (vcmVal < 80) {
             vcmText = 'Microcítica';
             if (vcmTag) { vcmTag.innerText = 'Microcítica'; vcmTag.className = 'badge badge-amber'; }
@@ -144,32 +152,50 @@ function updateAllCalculations() {
             vcmText = 'Normocítica';
             if (vcmTag) { vcmTag.innerText = 'Normocítica'; vcmTag.className = 'badge badge-emerald'; }
         }
-    } else if (vcmTag) {
-        vcmTag.innerText = 'Pendiente';
-        vcmTag.className = 'badge badge-cyan';
+    } else {
+        if (vcmTag) { vcmTag.innerText = 'Pendiente'; vcmTag.className = 'badge badge-cyan'; }
+        if (resVcmDisp) resVcmDisp.innerText = '-- fL';
     }
 
-    // Si no hay Hb ingresada aún
-    if (hbRaw === '' || hbRaw === null || isNaN(parseFloat(hbRaw))) {
+    if (resDiscountDisp) resDiscountDisp.innerText = `-${altCorrection} g/dL`;
+
+    // Si aún no ingresaron porcentaje
+    if (pctRaw === '' || pctRaw === null || isNaN(parseFloat(pctRaw))) {
+        if (hbCalcLabel) hbCalcLabel.innerText = '-- g/dL';
         if (hbDisp) hbDisp.innerText = '-- g/dL';
-        
+        if (resPctObs) resPctObs.innerText = '-- %';
+        if (resHbEq) resHbEq.innerText = '-- g/dL';
+
         const sevBadge = document.getElementById('resSeverityBadge');
         if (sevBadge) { sevBadge.innerText = 'Pendiente'; sevBadge.className = 'badge badge-cyan'; }
 
         const titleEl = document.getElementById('resDiagnosisTitle');
-        if (titleEl) titleEl.innerText = 'Ingrese Hemoglobina';
+        if (titleEl) titleEl.innerText = 'Ingrese Porcentaje (%)';
 
         const hbCorrEl = document.getElementById('resHbCorr');
         if (hbCorrEl) hbCorrEl.innerText = '-- g/dL';
 
+        if (etioHeader && etioBody) {
+            etioHeader.innerText = "Causa: Evaluación por Hemograma";
+            etioHeader.style.color = "var(--amber)";
+            etioBody.innerText = "Complete la hemoglobina y parámetros de laboratorio para ver la guía clínica.";
+        }
+
         return;
     }
 
-    const hbObserved = parseFloat(hbRaw);
-    const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
+    // Conversión % a g/dL (Hb = % / 3) y descuento por altitud
+    const pctObserved = parseFloat(pctRaw);
+    const hbObserved = Math.round((pctObserved / 3) * 10) / 10;
 
+    if (hbCalcLabel) hbCalcLabel.innerText = `${hbObserved} g/dL`;
+    if (resPctObs) resPctObs.innerText = `${pctObserved} %`;
+    if (resHbEq) resHbEq.innerText = `${hbObserved} g/dL`;
+
+    const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
     if (hbDisp) hbDisp.innerText = `${hbAdjusted} g/dL`;
 
+    // Diagnóstico OMS
     let severity = 'Sin Anemia';
     let badgeClass = 'badge badge-emerald';
     let diagTitle = 'Sin Anemia Detectada';
@@ -202,12 +228,42 @@ function updateAllCalculations() {
     const hbCorrEl = document.getElementById('resHbCorr');
     if (hbCorrEl) hbCorrEl.innerText = `${hbAdjusted} g/dL`;
 
-    // Contar síntomas seleccionados
+    const resMorphEl = document.getElementById('resMorphTitle');
+    if (resMorphEl) resMorphEl.innerText = vcmText;
+
+    // Actualización de Causa Probable y Guía
+    if (etioHeader && etioBody) {
+        if (hbAdjusted >= popData.normal) {
+            etioHeader.innerText = "Estado: Valores en Rango Normal";
+            etioHeader.style.color = "var(--emerald)";
+            etioBody.innerText = "No se detecta anemia. Se recomienda mantener una dieta balanceada rica en hierro y realizar controles preventivos de rutina.";
+        } else {
+            etioHeader.style.color = "var(--amber)";
+            if (vcmRaw !== '' && vcmRaw !== null) {
+                const vcmVal = parseFloat(vcmRaw);
+                if (vcmVal < 80) {
+                    etioHeader.innerText = "Causa Probable: Deficiencia de Hierro (Anemia Ferropénica)";
+                    etioBody.innerText = "Patrón microcítico. Principalmente asociado a déficit de hierro. Se sugiere solicitar perfil de hierro (ferritina) e iniciar tratamiento/suplementación según norma MINSA.";
+                } else if (vcmVal > 100) {
+                    etioHeader.innerText = "Causa Probable: Déficit de Vitamina B12 / Ácido Fólico";
+                    etioBody.innerText = "Patrón macrocítico. Compatible con anemia megaloblástica por deficiencia de B12 o folatos, o causas hepáticas. Requiere dosaje específico.";
+                } else {
+                    etioHeader.innerText = "Causa Probable: Enfermedad Crónica / Pérdida Aguda";
+                    etioBody.innerText = "Patrón normocítico. Descartar cuadros inflamatorios crónicos, pérdidas agudas de sangre, enfermedad renal o hemólisis.";
+                }
+            } else {
+                etioHeader.innerText = "Causa Probable: Requiere VCM para Clasificación";
+                etioBody.innerText = "Se detectó nivel de hemoglobina disminuido. Ingrese el VCM (fL) en el Paso 2 para determinar si es microcítica, normocítica o macrocítica.";
+            }
+        }
+    }
+
+    // Síntomas
     const selectedSymptoms = document.querySelectorAll('input[name="sintoma"]:checked').length;
     const symCountEl = document.getElementById('resSymptomCount');
     if (symCountEl) symCountEl.innerText = selectedSymptoms;
 
-    // Datos para el reporte impreso
+    // Impresión
     const dniEl = document.getElementById('prtDni');
     const nomEl = document.getElementById('prtNombre');
     const diagEl = document.getElementById('prtDiag');
@@ -228,14 +284,15 @@ function drawGauge() {
     const height = canvas.height;
     ctx.clearRect(0, 0, width, height);
 
-    const hbRaw = document.getElementById('hbInput')?.value;
+    const pctRaw = document.getElementById('hbInput')?.value;
     const altitudRaw = document.getElementById('altitudInput')?.value;
     const meters = altitudRaw ? parseFloat(altitudRaw) : 0;
     const altCorrection = getAltitudeCorrection(meters);
 
     let hbAdjusted = 14.0;
-    if (hbRaw !== '' && hbRaw !== null) {
-        const hbObs = parseFloat(hbRaw);
+    if (pctRaw !== '' && pctRaw !== null) {
+        const pctObs = parseFloat(pctRaw);
+        const hbObs = Math.round((pctObs / 3) * 10) / 10;
         hbAdjusted = Math.max(0, Math.round((hbObs - altCorrection) * 10) / 10);
     }
 
@@ -249,13 +306,11 @@ function drawGauge() {
         return Math.PI + pct * Math.PI;
     }
 
-    // Dibujar Arcos
     drawArc(ctx, centerX, centerY, radius, hbToAngle(5), hbToAngle(8), '#ef4444');
     drawArc(ctx, centerX, centerY, radius, hbToAngle(8), hbToAngle(11), '#f59e0b');
     drawArc(ctx, centerX, centerY, radius, hbToAngle(11), hbToAngle(13), '#06b6d4');
     drawArc(ctx, centerX, centerY, radius, hbToAngle(13), hbToAngle(17), '#10b981');
 
-    // Aguja
     const angle = hbToAngle(hbAdjusted);
     ctx.save();
     ctx.translate(centerX, centerY);
@@ -278,28 +333,25 @@ function drawArc(ctx, x, y, radius, start, end, color) {
     ctx.stroke();
 }
 
-// 8. FUNCION DE LIMPIEZA DEL FORMULARIO
+// 8. FUNCION DE LIMPIEZA
 function resetForm() {
     const form = document.getElementById('evaluationForm');
     if (form) form.reset();
 
-    // Desmarcar checkboxes y chips
     document.querySelectorAll('input[name="sintoma"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('.chip-btn').forEach(btn => btn.classList.remove('active'));
     
     const gestCheck = document.getElementById('gestanteCheck');
     if (gestCheck) gestCheck.checked = false;
 
-    // Seleccionar grupo inicial por defecto
     const defaultRadio = document.querySelector('input[name="poblacion"][value="hombre_adulto"]');
     if (defaultRadio) defaultRadio.checked = true;
 
-    // Actualizar pantalla y volver al paso 1
     updateAllCalculations();
     goToStep(1);
 }
 
-// 9. GUARDAR Y SINCRONIZAR CON SUPABASE & LOCALSTORAGE
+// 9. GUARDAR Y SINCRONIZAR
 async function saveReportToHistory() {
     const dni = document.getElementById('dni')?.value.trim();
     const nombres = document.getElementById('nombres')?.value.trim();
@@ -312,7 +364,8 @@ async function saveReportToHistory() {
 
     const meters = parseFloat(document.getElementById('altitudInput')?.value) || 0;
     const altCorrection = getAltitudeCorrection(meters);
-    const hbObserved = parseFloat(document.getElementById('hbInput')?.value) || 0;
+    const pctObserved = parseFloat(document.getElementById('hbInput')?.value) || 0;
+    const hbObserved = Math.round((pctObserved / 3) * 10) / 10;
     const hbAdjusted = Math.max(0, Math.round((hbObserved - altCorrection) * 10) / 10);
 
     const record = {
@@ -335,7 +388,7 @@ async function saveReportToHistory() {
             await supabaseClient.from('pacientes_anemia').insert([record]);
             console.log("Sincronizado con Supabase.");
         } catch (err) {
-            console.warn("Guardado localmente. No se conectó a Supabase.", err);
+            console.warn("Guardado localmente.", err);
         }
     }
 
@@ -344,12 +397,10 @@ async function saveReportToHistory() {
 }
 
 // 10. RENDERIZAR TABLA DE HISTORIAL
-// 10. RENDERIZAR TABLA DE HISTORIAL (Sincronizado con Supabase)
 async function renderHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
     if (!tbody) return;
 
-    // Intentar traer los datos actualizados desde Supabase si está disponible
     if (supabaseClient) {
         try {
             const { data, error } = await supabaseClient
@@ -362,7 +413,7 @@ async function renderHistoryTable() {
                 localStorage.setItem('hemo_patient_history', JSON.stringify(historyStore));
             }
         } catch (err) {
-            console.warn("No se pudo obtener datos de Supabase, usando localStorage local.", err);
+            console.warn("Uso local activo.", err);
         }
     }
 
@@ -423,7 +474,7 @@ async function deleteRecord(id) {
             try {
                 await supabaseClient.from('pacientes_anemia').delete().eq('id', id);
             } catch (err) {
-                console.warn("No se pudo borrar de Supabase.", err);
+                console.warn("Error al borrar en Supabase.", err);
             }
         }
         renderHistoryTable();
@@ -438,7 +489,7 @@ function clearAllHistory() {
     }
 }
 
-// Inicialización al cargar la página
+// Carga inicial
 window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('reset') === 'true') {
